@@ -1,6 +1,8 @@
 import os
+import re
 import tkinter as tk
 from pygame import mixer
+import shutil
 
 
 class Application(tk.Frame):
@@ -53,6 +55,10 @@ class Application(tk.Frame):
         self.save_button = tk.Button(
             self, text="Save text", command=self.save_text)
         self.save_button.grid(row=4, column=0, columnspan=4)
+
+        self.extract_button = tk.Button(
+            self, text="Extract Training Data", command=self.extract_training_data)
+        self.extract_button.grid(row=5, column=0, columnspan=4)
 
         self.load_files(self.folder_var.get())
 
@@ -115,6 +121,33 @@ class Application(tk.Frame):
         try:
             with open(os.path.join(self.folder_var.get(), self.file_var.get().replace('.wav', '.txt')), 'w') as f:
                 f.write(self.text_area.get('1.0', tk.END))
+        except Exception as e:
+            print(e)
+
+    def extract_training_data(self):
+        number = 1
+        try:
+            os.makedirs('training_data/wavs', exist_ok=True)
+            metadata = []
+            for _, file in enumerate(self.files, start=1):
+                sound_file_path = os.path.join(self.folder_var.get(), file)
+                text_file_path = sound_file_path.replace('.wav', '.txt')
+                with open(text_file_path, 'r') as f:
+                    text = f.read()
+                    text = text.replace('\n', ' ')
+                    text = re.sub(r'[^a-zA-Z0-9 ]', '', text)
+                    text = ' '.join(text.split())
+
+                # less than 5 words or over 200
+                if len(text.split()) < 5 or len(text) > 150:
+                    continue
+                new_sound_file_path = os.path.join(
+                    'training_data/wavs', f'SOUND-{number:03}.wav')
+                shutil.copy(sound_file_path, new_sound_file_path)
+                metadata.append(f'SOUND-{number:03}|{text}|{text}\n')
+                number += 1
+            with open('training_data/metadata.csv', 'w') as f:
+                f.writelines(metadata)
         except Exception as e:
             print(e)
 
